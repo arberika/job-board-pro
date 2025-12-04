@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { use } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, MapPin, Briefcase, DollarSign, Home, FileText, CheckCircle2, Clock } from 'lucide-react'
+import { ArrowLeft, MapPin, Briefcase, DollarSign, Home, FileText, CheckCircle2, Clock, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
@@ -15,12 +15,47 @@ export default function VacancyPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params)
   const vacancy = vacancies.find(v => v.id === id)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [showStickyCTA, setShowStickyCTA] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     messenger: 'whatsapp',
   })
+
+  // Sticky CTA on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowStickyCTA(window.scrollY > 300)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Check if vacancy is in favorites
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]')
+      setIsFavorite(favorites.includes(vacancy?.id))
+    }
+  }, [vacancy?.id])
+
+  // Toggle favorite
+  const toggleFavorite = () => {
+    if (typeof window !== 'undefined' && vacancy) {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]')
+      if (isFavorite) {
+        const updated = favorites.filter((favId: string) => favId !== vacancy.id)
+        localStorage.setItem('favorites', JSON.stringify(updated))
+        setIsFavorite(false)
+      } else {
+        favorites.push(vacancy.id)
+        localStorage.setItem('favorites', JSON.stringify(favorites))
+        setIsFavorite(true)
+      }
+    }
+  }
 
   if (!vacancy) {
     return (
@@ -86,6 +121,17 @@ export default function VacancyPage({ params }: { params: Promise<{ id: string }
                       </div>
                     </div>
                   </div>
+                  <button
+                    onClick={toggleFavorite}
+                    className="p-3 rounded-lg hover:bg-gray-100 transition-colors"
+                    aria-label={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+                  >
+                    <Heart
+                      className={`w-7 h-7 transition-all ${
+                        isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-500'
+                      }`}
+                    />
+                  </button>
                 </div>
 
                 {/* Key Info */}
@@ -315,6 +361,33 @@ export default function VacancyPage({ params }: { params: Promise<{ id: string }
           </p>
         </form>
       </Modal>
+
+      {/* Sticky CTA for Mobile */}
+      {showStickyCTA && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 md:hidden z-40 animate-slide-up">
+          <div className="flex gap-3">
+            <button
+              onClick={toggleFavorite}
+              className="p-3 rounded-lg border-2 border-gray-200 hover:border-red-500 transition-colors"
+              aria-label={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+            >
+              <Heart
+                className={`w-6 h-6 transition-all ${
+                  isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
+                }`}
+              />
+            </button>
+            <Button
+              variant="primary"
+              size="lg"
+              className="flex-1"
+              onClick={() => setIsModalOpen(true)}
+            >
+              Откликнуться на вакансию
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

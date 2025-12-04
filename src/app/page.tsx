@@ -1,15 +1,61 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, ArrowRight, CheckCircle2, Users, Briefcase, Globe, Star } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { Testimonials } from '@/components/shared/Testimonials'
+import { Partners } from '@/components/shared/Partners'
 import { vacancies, categories, countries } from '@/data/vacancies'
 
 export default function HomePage() {
+  const router = useRouter()
   const featuredVacancies = vacancies.filter(v => v.isFeatured).slice(0, 6)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSearchQuery(value)
+
+    if (value.length > 2) {
+      // Filter vacancies and categories for suggestions
+      const vacancySuggestions = vacancies
+        .filter(v => v.title.toLowerCase().includes(value.toLowerCase()))
+        .map(v => v.title)
+        .slice(0, 3)
+
+      const categorySuggestions = categories
+        .filter(c => c.name.toLowerCase().includes(value.toLowerCase()))
+        .map(c => c.name)
+        .slice(0, 2)
+
+      const allSuggestions = [...new Set([...vacancySuggestions, ...categorySuggestions])].slice(0, 5)
+      setSuggestions(allSuggestions)
+      setShowSuggestions(allSuggestions.length > 0)
+    } else {
+      setShowSuggestions(false)
+    }
+  }
+
+  const handleSearch = (query: string) => {
+    if (query.trim()) {
+      router.push(`/vacancies?q=${encodeURIComponent(query)}`)
+    } else {
+      router.push('/vacancies')
+    }
+    setShowSuggestions(false)
+  }
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchQuery(suggestion)
+    setShowSuggestions(false)
+    handleSearch(suggestion)
+  }
 
   return (
     <div>
@@ -49,21 +95,53 @@ export default function HomePage() {
             </div>
 
             {/* Search Bar */}
-            <div className="bg-white rounded-2xl shadow-2xl p-4 md:p-6 max-w-3xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-4 md:p-6 max-w-3xl mx-auto relative">
               <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
+                <div className="flex-1 relative">
                   <Input
                     placeholder="Должность или ключевое слово..."
                     icon={<Search size={20} />}
                     className="h-14"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch(searchQuery)
+                      } else if (e.key === 'Escape') {
+                        setShowSuggestions(false)
+                      }
+                    }}
+                    onBlur={() => {
+                      // Delay to allow suggestion click
+                      setTimeout(() => setShowSuggestions(false), 200)
+                    }}
                   />
+
+                  {/* Autocomplete Dropdown */}
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden animate-slide-down">
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="w-full px-4 py-3 text-left hover:bg-primary-50 transition-colors flex items-center gap-3 text-gray-800"
+                        >
+                          <Search size={16} className="text-gray-400" />
+                          <span>{suggestion}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <Link href="/vacancies">
-                  <Button variant="primary" size="lg" className="w-full md:w-auto">
-                    Найти вакансию
-                    <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </Link>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full md:w-auto"
+                  onClick={() => handleSearch(searchQuery)}
+                >
+                  Найти вакансию
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
               </div>
 
               {/* Quick Search Tags */}
@@ -275,6 +353,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Partners Section */}
+      <Partners />
+
+      {/* Testimonials */}
+      <Testimonials />
 
       {/* Trust Section */}
       <section className="py-20 bg-primary-600 text-white">
