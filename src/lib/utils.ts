@@ -6,7 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatSalary(min: number, max: number, currency: string): string {
-  return `${min.toLocaleString()} - ${max.toLocaleString()} ${currency}`
+  const formatNumber = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  return `${formatNumber(min)} - ${formatNumber(max)} ${currency}`
 }
 
 export function getCountryFlag(countryCode: string): string {
